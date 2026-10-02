@@ -245,6 +245,7 @@ input[type=date]{font-size:13px;font-family:"Nunito",sans-serif;font-weight:600;
   <div class="auth-card">
     <button class="btn block" id="google-btn">Continue with Google</button>
     <div class="auth-or">or use email</div>
+    <input type="text" id="auth-nickname" placeholder="nickname (only needed to create an account)" autocomplete="nickname" maxlength="20">
     <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
     <input type="password" id="auth-password" placeholder="password" autocomplete="current-password">
     <div class="row" style="margin-top:4px;">
@@ -423,8 +424,9 @@ input[type=date]{font-size:13px;font-family:"Nunito",sans-serif;font-weight:600;
         </div>
       </div>
       <div class="panel">
-        <div class="panel-label">Display name</div>
-        <input type="text" id="profile-name" placeholder="How others see you">
+        <div class="panel-label">Nickname</div>
+        <input type="text" id="profile-name" placeholder="How others see you" maxlength="20">
+        <div class="status-line" id="nickname-cooldown-note" style="margin-top:4px;"></div>
         <div class="panel-label" style="margin-top:16px;">Bio</div>
         <textarea id="profile-bio" placeholder="A line about you — optional"></textarea>
         <div class="row">
@@ -507,15 +509,35 @@ document.getElementById("auth-signin").addEventListener("click", async function(
   var res = await sb.auth.signInWithPassword({ email: email, password: password });
   if(res.error){ status.className = "status-line err"; status.textContent = res.error.message; }
 });
+var NICK_RE = /^[a-zA-Z0-9_]{3,20}$/;
 document.getElementById("auth-signup").addEventListener("click", async function(){
+  var nickname = document.getElementById("auth-nickname").value.trim();
   var email = document.getElementById("auth-email").value.trim();
   var password = document.getElementById("auth-password").value;
   var status = document.getElementById("auth-status");
+  status.className = "status-line";
+  if(!nickname){ status.textContent = "Pick a nickname."; return; }
+  if(!NICK_RE.test(nickname)){ status.textContent = "Nickname: 3-20 characters, letters/numbers/underscore only."; return; }
   if(!email || !password){ status.textContent = "Enter an email and password."; return; }
   if(password.length < 6){ status.textContent = "Password needs at least 6 characters."; return; }
+  status.textContent = "Checking nickname...";
+  try{
+    var check = await sb.from("profiles").select("id").ilike("display_name", nickname).maybeSingle();
+    if(check.data){ status.className = "status-line err"; status.textContent = "That nickname is taken — pick another one."; return; }
+  }catch(e){}
   status.textContent = "Creating account...";
   var res = await sb.auth.signUp({ email: email, password: password });
   if(res.error){ status.className = "status-line err"; status.textContent = res.error.message; return; }
+  if(res.data.user){
+    var upd = await sb.from("profiles").update({ display_name: nickname }).eq("id", res.data.user.id);
+    if(upd.error){
+      status.className = "status-line err";
+      status.textContent = (upd.error.code === "23505")
+        ? "That nickname was just taken — sign in and set a different one in your profile."
+        : "Account created, but couldn't set your nickname: " + upd.error.message;
+      return;
+    }
+  }
   status.className = "status-line";
   status.textContent = res.data.session ? "Account created." : "Check your email to confirm your account, then sign in.";
 });
@@ -539,10 +561,26 @@ function renderViewerChip(){
 }
 document.getElementById("viewer-id").addEventListener("click", function(){ showView("profile"); });
 
+function nicknameLockedUntil(){
+  if(!myProfile || !myProfile.nickname_changed_at) return null;
+  var next = new Date(myProfile.nickname_changed_at).getTime() + 7*24*60*60*1000;
+  return next > Date.now() ? new Date(next) : null;
+}
 function renderProfileView(){
   document.getElementById("profile-avatar-preview").src = (myProfile && myProfile.avatar_url) || fallbackAvatar((myProfile && myProfile.display_name) || "?");
   document.getElementById("profile-name").value = (myProfile && myProfile.display_name) || "";
   document.getElementById("profile-bio").value = (myProfile && myProfile.bio) || "";
+  var note = document.getElementById("nickname-cooldown-note");
+  var nameInput = document.getElementById("profile-name");
+  var lockedUntil = nicknameLockedUntil();
+  if(lockedUntil){
+    nameInput.disabled = true;
+    note.className = "status-line";
+    note.textContent = "You can change your nickname again on " + lockedUntil.toLocaleDateString();
+  } else {
+    nameInput.disabled = false;
+    note.textContent = "Nicknames can be changed once every 7 days.";
+  }
 }
 document.getElementById("avatar-btn").addEventListener("click", function(){ document.getElementById("avatar-input").click(); });
 document.getElementById("avatar-input").addEventListener("change", async function(e){
@@ -569,11 +607,29 @@ document.getElementById("profile-save").addEventListener("click", async function
   var name = document.getElementById("profile-name").value.trim();
   var bio = document.getElementById("profile-bio").value.trim();
   var statusEl = document.getElementById("profile-status");
-  statusEl.className = "status-line"; statusEl.textContent = "Saving...";
-  var res = await sb.from("profiles").update({ display_name: name, bio: bio }).eq("id", myId);
-  if(res.error){ statusEl.className = "status-line err"; statusEl.textContent = res.error.message; return; }
+  var oldName = (myProfile && myProfile.display_name) || "";
+  var nameChanged = name !== oldName;
+  statusEl.className = "status-line";
+  if(nameChanged){
+    if(nicknameLockedUntil()){ statusEl.className = "status-line err"; statusEl.textContent = "Nickname is locked for now — see the note above."; return; }
+    if(!NICK_RE.test(name)){ statusEl.className = "status-line err"; statusEl.textContent = "Nickname: 3-20 characters, letters/numbers/underscore only."; return; }
+    try{
+      var check = await sb.from("profiles").select("id").ilike("display_name", name).maybeSingle();
+      if(check.data && check.data.id !== myId){ statusEl.className = "status-line err"; statusEl.textContent = "That nickname is taken — pick another one."; return; }
+    }catch(e){}
+  }
+  statusEl.textContent = "Saving...";
+  var payload = { bio: bio };
+  if(nameChanged) payload.display_name = name;
+  var res = await sb.from("profiles").update(payload).eq("id", myId);
+  if(res.error){
+    statusEl.className = "status-line err";
+    statusEl.textContent = (res.error.code === "23505") ? "That nickname is taken — pick another one." : res.error.message;
+    return;
+  }
   myProfile.display_name = name; myProfile.bio = bio;
-  renderViewerChip();
+  if(nameChanged) myProfile.nickname_changed_at = new Date().toISOString();
+  renderViewerChip(); renderProfileView();
   statusEl.textContent = "Saved.";
 });
 
