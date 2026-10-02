@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vertika</title>
+<meta name="theme-color" content="#2F6F63">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vertika">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEEEE9; --surface:#FFFFFF; --surface-2:#F4F4EF; --ink:#1C201D; --ink-dim:#6B7268;
+  --line:#D4D5CB; --accent:#2F6F63; --accent-ink:#F4F6F2;
+  --pots:#AE4F32; --eds:#55487F; --mcas:#92731A;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111414; --surface:#191D1D; --surface-2:#1F2423; --ink:#E6E7E0; --ink-dim:#8D958B;
+    --line:#2E3433; --accent:#5FA595; --accent-ink:#0B110F;
+    --pots:#D4876A; --eds:#9A8BCB; --mcas:#CBA43F;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;}
+body{background:var(--bg);color:var(--ink);font-family:"Nunito",system-ui,sans-serif;
+  min-height:100%;font-size:15px;}
+h1,h2,.display{font-family:"Quicksand","Nunito",system-ui,sans-serif;font-weight:700;text-wrap:balance;}
+.mono{font-family:"Nunito",system-ui,sans-serif;font-weight:700;letter-spacing:.02em;}
+a{color:var(--accent)}
+button{font-family:inherit}
+::placeholder{color:var(--ink-dim);opacity:.75;}
+
+/* ---------- auth + onboarding ---------- */
+#authscreen,#onboard{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:22px;padding:calc(48px + env(safe-area-inset-top,0px)) 20px calc(40px + env(safe-area-inset-bottom,0px));
+  text-align:center;}
+#onboard h1,#authscreen h1{font-size:clamp(28px,7vw,38px);margin:0;letter-spacing:-0.01em;}
+#onboard p.lede,#authscreen p.lede{max-width:40ch;color:var(--ink-dim);font-size:15px;line-height:1.6;margin:0;}
+.auth-card{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;}
+.auth-or{color:var(--ink-dim);font-size:12.5px;font-weight:700;margin:4px 0;}
+#venn-wrap{position:relative;width:min(86vw,320px);aspect-ratio:1/1;}
+#venn-wrap svg{width:100%;height:100%;overflow:visible;}
+.venn-label{font-family:"Nunito",sans-serif;font-weight:800;font-size:13.5px;letter-spacing:.02em;
+  text-transform:uppercase;cursor:pointer;user-select:none;}
+.venn-circle{cursor:pointer;transition:fill-opacity .25s ease;}
+#onboard-confirm{margin-top:4px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:76px;}
+#onboard-picks{font-family:"Nunito",sans-serif;font-weight:600;font-size:13.5px;color:var(--ink-dim);min-height:18px;}
+.pick-tag{display:inline-block;padding:3px 10px;border-radius:999px;margin:0 3px;font-weight:700;}
+.btn{appearance:none;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);
+  font-weight:700;font-size:14.5px;padding:12px 24px;border-radius:999px;cursor:pointer;font-family:"Nunito",sans-serif;}
+.btn:hover{filter:brightness(1.06);}
+.btn:disabled{opacity:.45;cursor:default;filter:none;}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);}
+.btn.sm{padding:9px 18px;font-size:13.5px;}
+.btn.block{width:100%;}
+
+/* ---------- phone-first app shell ---------- */
+#app{display:none;min-height:100vh;}
+#app.active{display:flex;flex-direction:column;min-height:100vh;}
+.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:calc(16px + env(safe-area-inset-top,0px)) 20px 14px;background:var(--bg);border-bottom:1px solid var(--line);}
+.topbar-left{min-width:0;}
+.topbar-right{display:flex;align-items:center;gap:10px;flex:none;}
+.viewer-id{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink-dim);
+  background:none;border:0;cursor:pointer;padding:0;font-family:"Nunito",sans-serif;}
+.viewer-id img{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--surface-2);}
+.brand{font-family:"Quicksand",sans-serif;font-size:21px;font-weight:700;margin:0;letter-spacing:-.01em;}
+.condition-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.chip{font-family:"Nunito",sans-serif;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;
+  text-transform:uppercase;letter-spacing:.03em;}
+.edit-link{font-size:12.5px;font-weight:700;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-dim);
+  border-radius:999px;cursor:pointer;padding:7px 14px;flex:none;}
+
+main{flex:1;min-width:0;width:100%;max-width:560px;margin:0 auto;
+  padding:20px 18px calc(104px + env(safe-area-inset-bottom,0px));}
+.view{display:none;}
+.view.on{display:block;}
+.view-head{margin-bottom:16px;}
+.view-head h2{font-size:23px;margin:0 0 4px;font-weight:700;}
+.view-head p{margin:0;color:var(--ink-dim);font-size:13.5px;line-height:1.45;}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:17px 18px;margin-bottom:12px;
+  box-shadow:0 1px 2px rgba(20,20,15,.03);}
+.tagrow{display:flex;gap:5px;margin-bottom:9px;}
+.tagdot{width:16px;height:4px;border-radius:2px;}
+.card h3{font-size:16px;margin:0 0 6px;font-weight:700;}
+.card p{margin:0;font-size:13.5px;color:var(--ink-dim);line-height:1.55;}
+.card .meta{display:flex;align-items:center;gap:10px;margin-top:12px;font-family:"Nunito",sans-serif;
+  font-size:12px;font-weight:700;color:var(--ink-dim);}
+.tally-btn{display:inline-flex;align-items:center;gap:5px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:999px;padding:6px 12px;font-family:"Nunito",sans-serif;font-size:12px;font-weight:700;color:var(--ink-dim);cursor:pointer;}
+.tally-btn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.tally-btn svg{width:14px;height:11px;}
+.reply-toggle{background:none;border:0;color:var(--ink-dim);font-weight:700;font-size:12px;cursor:pointer;padding:0;
+  font-family:"Nunito",sans-serif;}
+.post-author{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:var(--accent);margin-bottom:7px;}
+.post-author img{width:20px;height:20px;border-radius:50%;object-fit:cover;background:var(--surface-2);}
+.post-text{font-size:14px;color:var(--ink);line-height:1.5;margin:0 0 2px;white-space:pre-wrap;}
+.replies-wrap{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:9px;}
+.reply-item{font-size:13px;line-height:1.5;color:var(--ink);}
+.reply-author{font-weight:800;color:var(--ink-dim);}
+.reply-row{display:flex;gap:7px;margin-top:2px;}
+.reply-row input{flex:1;font-size:13px;}
+
+.res-group{margin-bottom:22px;}
+.res-group h3{display:flex;align-items:center;gap:8px;font-size:12.5px;text-transform:uppercase;
+  letter-spacing:.04em;font-family:"Nunito",sans-serif;color:var(--ink-dim);margin:0 0 9px;font-weight:800;}
+.res-dot{width:8px;height:8px;border-radius:50%;}
+.res-item{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid var(--line);
+  font-size:13.5px;}
+.res-item:first-of-type{border-top:0;}
+.res-item span.fmt{font-family:"Nunito",sans-serif;font-size:10.5px;font-weight:800;color:var(--ink-dim);flex:none;}
+
+.tracker-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:17px 18px;margin-bottom:14px;
+  box-shadow:0 1px 2px rgba(20,20,15,.03);}
+.panel-label{font-family:"Nunito",sans-serif;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--ink-dim);margin-bottom:10px;font-weight:800;}
+
+textarea, input[type=text], input[type=date], input[type=email], input[type=password]{font:inherit;color:var(--ink);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:12px;padding:10px 13px;width:100%;}
+textarea{resize:vertical;min-height:68px;font-size:14px;line-height:1.5;}
+.row{display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap;}
+input[type=date]{font-size:13px;font-family:"Nunito",sans-serif;font-weight:600;width:auto;}
+.status-line{font-family:"Nunito",sans-serif;font-size:12px;color:var(--ink-dim);}
+.status-line.err{color:var(--pots);}
+.link-btn{font-size:12.5px;font-weight:700;background:none;border:0;color:var(--accent);cursor:pointer;margin-left:auto;padding:0;}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;}
+.seg button{border:0;background:var(--surface-2);color:var(--ink-dim);font-size:12px;font-weight:700;padding:8px 13px;cursor:pointer;
+  border-right:1px solid var(--line);font-family:"Nunito",sans-serif;}
+.seg button:last-child{border-right:0;}
+.seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:800;}
+.condpick{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.condpick button{font-family:"Nunito",sans-serif;font-size:11.5px;font-weight:800;padding:7px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--ink-dim);cursor:pointer;text-transform:uppercase;}
+.condpick button.on{color:#fff;border-color:transparent;}
+
+.qrow-table{display:flex;flex-direction:column;}
+.qrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);}
+.qrow:first-child{border-top:0;}
+.qrow .tagdot{width:9px;height:9px;border-radius:50%;flex:none;}
+.qrow .qlabel{flex:1;min-width:0;font-size:13.5px;font-weight:600;}
+.qrow .seg button{padding:7px 11px;font-size:11.5px;}
+
+.trigger-bar{display:none;margin-top:12px;padding:14px;border:1px solid var(--accent);border-radius:14px;
+  background:var(--surface-2);}
+.trigger-bar.on{display:block;}
+.trigger-bar .t-head{font-size:13px;margin-bottom:9px;color:var(--ink-dim);font-weight:600;}
+.trigger-bar .t-grid{display:flex;flex-wrap:wrap;gap:7px;}
+.t-opt{font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink);cursor:pointer;font-family:"Nunito",sans-serif;}
+.t-detail{display:none;margin-top:9px;gap:8px;}
+.t-detail.on{display:flex;}
+.t-detail input{flex:1;font-size:13px;}
+
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.cal-head h3{font-size:15.5px;margin:0;font-weight:800;font-family:"Nunito",sans-serif;letter-spacing:.01em;}
+.cal-nav{display:flex;gap:6px;}
+.cal-nav button{width:30px;height:30px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);
+  color:var(--ink);cursor:pointer;font-size:14px;}
+.jump-row{display:flex;gap:6px;margin-bottom:14px;}
+.jump-row input{flex:1;font-size:13px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-dow{font-family:"Nunito",sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--ink-dim);
+  text-align:center;padding-bottom:4px;}
+.cal-cell{aspect-ratio:1/1;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;
+  font-family:"Nunito",sans-serif;font-size:12px;font-weight:600;color:var(--ink-dim);position:relative;}
+.cal-cell.pad{visibility:hidden;}
+.cal-cell.today{border-color:var(--ink);font-weight:800;color:var(--ink);}
+.cal-cell.has-entries{border-color:var(--accent);border-width:1.5px;background:var(--surface);}
+.cal-cell.selected{outline:2px solid var(--accent);outline-offset:-2px;}
+.cal-cell .cal-bars{display:flex;gap:1.5px;height:9px;align-items:flex-end;}
+.cal-cell .cal-bars span{width:3px;border-radius:1px;}
+.cal-cell .cal-count{position:absolute;top:3px;right:4px;font-size:8.5px;color:var(--accent);font-weight:800;}
+
+.day-panel{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);}
+.day-panel h4{font-family:"Nunito",sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.03em;
+  color:var(--ink-dim);margin:0 0 10px;font-weight:800;}
+.entry-item{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-top:1px solid var(--line);font-size:13.5px;}
+.entry-item:first-of-type{border-top:0;}
+.entry-item .entry-del{margin-left:auto;background:none;border:0;color:var(--ink-dim);cursor:pointer;font-size:17px;line-height:1;flex:none;}
+.entry-item .entry-body{flex:1;min-width:0;}
+.entry-item .entry-meta{display:flex;align-items:center;gap:4px;margin-top:5px;}
+.entry-item .tagdot{width:11px;height:4px;}
+.entry-item .entry-trigger{font-size:12px;color:var(--ink-dim);margin-top:4px;}
+.sev-badge{font-family:"Nunito",sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;
+  border-radius:999px;background:var(--line);color:var(--ink-dim);margin-left:7px;}
+
+.copybtn{font-family:"Nunito",sans-serif;font-size:11.5px;font-weight:700;background:none;border:1px solid var(--line);
+  border-radius:999px;padding:8px 14px;cursor:pointer;color:var(--ink-dim);}
+.copybtn:disabled{opacity:.5;cursor:default;}
+
+.subtabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line);}
+.subtab,.grouptab{font-family:"Nunito",sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+  background:none;border:0;padding:9px 2px;margin-right:20px;color:var(--ink-dim);cursor:pointer;
+  border-bottom:2px solid transparent;}
+.subtab.on,.grouptab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:800;}
+.subview{display:none;}
+.subview.on{display:block;}
+
+.history-group{margin-bottom:18px;}
+.history-date{font-family:"Nunito",sans-serif;font-size:12px;font-weight:800;color:var(--ink-dim);margin-bottom:5px;
+  display:flex;align-items:center;gap:8px;}
+.history-date .line{flex:1;height:1px;background:var(--line);}
+.history-empty{color:var(--ink-dim);font-size:13.5px;padding:24px 0;text-align:center;}
+
+.notice-card{background:var(--surface-2);border:1px dashed var(--line);border-radius:14px;padding:16px;font-size:13px;
+  color:var(--ink-dim);line-height:1.55;}
+
+/* ---------- profile ---------- */
+.avatar-row{display:flex;align-items:center;gap:16px;}
+.avatar-big{width:68px;height:68px;border-radius:50%;object-fit:cover;background:var(--surface-2);border:1px solid var(--line);}
+
+/* ---------- bottom tab bar ---------- */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:var(--surface);
+  border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px 5px;
+  background:none;border:0;color:var(--ink-dim);cursor:pointer;font-family:"Nunito",sans-serif;}
+.tab-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;}
+.tab-item span{font-size:10.5px;font-weight:700;}
+.tab-item.on{color:var(--accent);}
+.tab-item.on svg{stroke-width:2.1;}
+
+@media(min-width:620px){
+  main{max-width:600px;}
+  .tabbar{max-width:600px;left:50%;transform:translateX(-50%);border-left:1px solid var(--line);
+    border-right:1px solid var(--line);border-radius:20px 20px 0 0;}
+}
+</style>
+</head>
+<body>
+
+<div id="authscreen" style="display:none;">
+  <h1 class="display">Vertika</h1>
+  <p class="lede">Tracking POTS, hypermobile EDS, and MCAS — in one place, with people who get it.</p>
+  <div class="auth-card">
+    <button class="btn block" id="google-btn">Continue with Google</button>
+    <div class="auth-or">or use email</div>
+    <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+    <input type="password" id="auth-password" placeholder="password" autocomplete="current-password">
+    <div class="row" style="margin-top:4px;">
+      <button class="btn sm" id="auth-signin">Sign in</button>
+      <button class="btn ghost sm" id="auth-signup">Create account</button>
+    </div>
+    <div class="status-line" id="auth-status"></div>
+  </div>
+</div>
+
+<div id="onboard">
+  <h1 class="display">Three diagnoses.<br>One place.</h1>
+  <p class="lede">POTS, hypermobile EDS, and MCAS show up together so often that clinicians call it the trifecta — but every app out there only covers one. Tap the circle (or circles) that are yours.</p>
+  <div id="venn-wrap"></div>
+  <div id="onboard-confirm">
+    <div id="onboard-picks">nothing selected yet</div>
+    <button class="btn" id="enter-btn" disabled>Enter Vertika</button>
+  </div>
+</div>
+
+<div id="app">
+  <header class="topbar">
+    <div class="topbar-left">
+      <p class="brand">Vertika</p>
+      <div class="condition-chips" id="rail-chips"></div>
+    </div>
+    <div class="topbar-right">
+      <button class="viewer-id" id="viewer-id"></button>
+      <button class="edit-link" id="edit-conditions">Edit</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="view on" id="view-feed">
+      <div class="view-head">
+        <h2 class="display">Feed</h2>
+        <p>Filtered to what you told us. The tick marks show which diagnoses a post touches.</p>
+      </div>
+      <div id="feed-list"></div>
+    </section>
+
+    <section class="view" id="view-community">
+      <div class="view-head">
+        <h2 class="display">Community</h2>
+        <p>Real posts from people carrying some or all of the same three — shared with everyone here.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">Share something</div>
+        <textarea id="post-input" placeholder="What's going on? Ask a question, vent, or share what helped."></textarea>
+        <div class="condpick" id="post-tags"></div>
+        <div class="row">
+          <button class="btn sm" id="post-submit">Post</button>
+          <span class="status-line" id="post-status"></span>
+        </div>
+      </div>
+
+      <div class="subtabs" id="community-groups">
+        <button class="grouptab on" data-group="all">All</button>
+        <button class="grouptab" data-group="pots">POTS</button>
+        <button class="grouptab" data-group="eds">EDS</button>
+        <button class="grouptab" data-group="mcas">MCAS</button>
+      </div>
+      <div class="row" style="margin-top:-6px;">
+        <span class="status-line">Sort</span>
+        <div class="seg" id="community-sort">
+          <button type="button" data-sort="recent" class="on">Recent</button>
+          <button type="button" data-sort="popular">Popular</button>
+        </div>
+      </div>
+
+      <div id="community-list"></div>
+    </section>
+
+    <section class="view" id="view-tracker">
+      <div class="view-head">
+        <h2 class="display">Symptom log</h2>
+        <p>Write it down, tag it, pick a severity — then see every day of it below.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">Describe it</div>
+        <textarea id="log-input" placeholder="e.g. heart was racing when I stood up this morning"></textarea>
+        <div class="condpick" id="log-tags"></div>
+        <div class="row">
+          <div class="seg" id="log-sev">
+            <button type="button" data-sev="1">Mild</button>
+            <button type="button" data-sev="2" class="on">Mod</button>
+            <button type="button" data-sev="3">Severe</button>
+          </div>
+        </div>
+        <div class="row">
+          <input type="date" id="log-date">
+          <button class="btn sm" id="log-submit">Log it</button>
+        </div>
+        <div class="status-line" id="log-status" style="margin-top:6px;"></div>
+
+        <div class="trigger-bar" id="trigger-bar">
+          <div class="t-head">What was happening around this? (optional)</div>
+          <div class="t-grid" id="t-grid"></div>
+          <div class="t-detail" id="t-detail">
+            <input type="text" id="t-detail-input" placeholder="say more — which food, what activity...">
+            <button class="btn ghost sm" id="t-detail-save">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">Quick log — tap a severity, logged at the date above</div>
+        <div class="qrow-table" id="qchip-grid"></div>
+      </div>
+
+      <div class="subtabs">
+        <button class="subtab on" data-sub="calendar">Calendar</button>
+        <button class="subtab" data-sub="history">All entries</button>
+      </div>
+
+      <div class="subview on" id="subview-calendar">
+        <div class="tracker-grid">
+          <div class="panel">
+            <div class="jump-row">
+              <input type="date" id="jump-date">
+              <button class="btn ghost sm" id="jump-go">Go to date</button>
+            </div>
+            <div class="cal-head">
+              <h3 id="cal-title">—</h3>
+              <div class="cal-nav">
+                <button id="cal-prev">‹</button>
+                <button id="cal-next">›</button>
+              </div>
+            </div>
+            <div class="cal-grid" id="cal-grid"></div>
+            <div class="day-panel" id="day-panel" style="display:none;">
+              <h4 id="day-panel-title">—</h4>
+              <div id="day-panel-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subview" id="subview-history">
+        <div class="panel"><div id="history-list"></div></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-assistant">
+      <div class="view-head">
+        <h2 class="display">Assistant</h2>
+        <p>A plain-language assistant that reads your log and answers questions.</p>
+      </div>
+      <div class="notice-card">
+        The AI assistant and AI note-reading aren't wired up in this build yet — they need their own secure backend (an API key can't live in a web page), which is the next piece after this test round. Everything else on this page — logging, calendar, triggers, and the community — is fully real and saving to your own database.
+      </div>
+    </section>
+
+    <section class="view" id="view-resources">
+      <div class="view-head">
+        <h2 class="display">Resources</h2>
+        <p>One page per condition, plus the ones that only make sense once you have more than one.</p>
+      </div>
+      <div id="resources-list"></div>
+    </section>
+
+    <section class="view" id="view-profile">
+      <div class="view-head">
+        <h2 class="display">Profile</h2>
+        <p>How you show up in Community.</p>
+      </div>
+      <div class="panel">
+        <div class="avatar-row">
+          <img class="avatar-big" id="profile-avatar-preview" alt="">
+          <div>
+            <input type="file" id="avatar-input" accept="image/*" style="display:none;">
+            <button class="btn ghost sm" id="avatar-btn">Change photo</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label">Display name</div>
+        <input type="text" id="profile-name" placeholder="How others see you">
+        <div class="panel-label" style="margin-top:16px;">Bio</div>
+        <textarea id="profile-bio" placeholder="A line about you — optional"></textarea>
+        <div class="row">
+          <button class="btn sm" id="profile-save">Save</button>
+          <span class="status-line" id="profile-status"></span>
+        </div>
+      </div>
+      <div class="panel">
+        <button class="btn ghost sm" id="signout-btn">Sign out</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab-item on" data-view="feed">
+      <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
+      <span>Feed</span>
+    </button>
+    <button class="tab-item" data-view="community">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.4"/><circle cx="16" cy="10.5" r="2.6"/><path d="M3.5 19.5c0-3.2 2.5-5.5 5.5-5.5s5.5 2.3 5.5 5.5"/><path d="M15.2 15.1c2.3.2 4.3 2.1 4.3 4.4"/></svg>
+      <span>Community</span>
+    </button>
+    <button class="tab-item" data-view="tracker">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/></svg>
+      <span>Log</span>
+    </button>
+    <button class="tab-item" data-view="assistant">
+      <svg viewBox="0 0 24 24"><path d="M4 5.5h16v10H9l-4 4v-4H4z" stroke-linejoin="round"/></svg>
+      <span>Assistant</span>
+    </button>
+    <button class="tab-item" data-view="resources">
+      <svg viewBox="0 0 24 24"><path d="M4 5.5c2-1 5-1 7 0v13c-2-1-5-1-7 0zM18 5.5c-2-1-5-1-7 0v13c2-1 5-1 7 0z" stroke-linejoin="round"/></svg>
+      <span>Resources</span>
+    </button>
+  </nav>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+(function(){
+"use strict";
+
+var SUPABASE_URL = "https://dsryaorstmwtcklfauxl.supabase.co";
+var SUPABASE_KEY = "sb_publishable_10R6Qgr3UF7NnaoFcjxTsg_zgmiCGti";
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+var COND = {
+  pots:{label:"POTS", full:"Postural Orthostatic Tachycardia Syndrome", color:"var(--pots)"},
+  eds:{label:"EDS", full:"Hypermobile Ehlers-Danlos Syndrome", color:"var(--eds)"},
+  mcas:{label:"MCAS", full:"Mast Cell Activation Syndrome", color:"var(--mcas)"}
+};
+var SEV_LABEL = {1:"mild",2:"moderate",3:"severe"};
+
+var myId = null, myProfile = null;
+
+/* ================= auth ================= */
+function show(el){ el.style.display = "flex"; }
+function hide(el){ el.style.display = "none"; }
+
+function escapeHtml(s){ var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+function fallbackAvatar(seed){
+  var c = document.createElement("canvas"); c.width = 64; c.height = 64;
+  var ctx = c.getContext("2d");
+  var hue = 0; for(var i=0;i<(seed||"").length;i++){ hue = (hue + (seed||"").charCodeAt(i)*13) % 360; }
+  ctx.fillStyle = "hsl(" + hue + ",38%,55%)"; ctx.fillRect(0,0,64,64);
+  ctx.fillStyle = "#fff"; ctx.font = "700 28px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(((seed||"?")[0]||"?").toUpperCase(), 32, 34);
+  return c.toDataURL();
+}
+
+document.getElementById("google-btn").addEventListener("click", async function(){
+  await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.href } });
+});
+document.getElementById("auth-signin").addEventListener("click", async function(){
+  var email = document.getElementById("auth-email").value.trim();
+  var password = document.getElementById("auth-password").value;
+  var status = document.getElementById("auth-status");
+  if(!email || !password){ status.textContent = "Enter an email and password."; return; }
+  status.textContent = "Signing in...";
+  var res = await sb.auth.signInWithPassword({ email: email, password: password });
+  if(res.error){ status.className = "status-line err"; status.textContent = res.error.message; }
+});
+document.getElementById("auth-signup").addEventListener("click", async function(){
+  var email = document.getElementById("auth-email").value.trim();
+  var password = document.getElementById("auth-password").value;
+  var status = document.getElementById("auth-status");
+  if(!email || !password){ status.textContent = "Enter an email and password."; return; }
+  if(password.length < 6){ status.textContent = "Password needs at least 6 characters."; return; }
+  status.textContent = "Creating account...";
+  var res = await sb.auth.signUp({ email: email, password: password });
+  if(res.error){ status.className = "status-line err"; status.textContent = res.error.message; return; }
+  status.className = "status-line";
+  status.textContent = res.data.session ? "Account created." : "Check your email to confirm your account, then sign in.";
+});
+document.getElementById("signout-btn").addEventListener("click", async function(){ await sb.auth.signOut(); });
+
+async function loadMyProfile(){
+  try{
+    var res = await sb.from("profiles").select("*").eq("id", myId).maybeSingle();
+    if(res.data){ myProfile = res.data; return; }
+  }catch(e){}
+  myProfile = { id: myId, display_name: "", bio: "", avatar_url: null };
+}
+function renderViewerChip(){
+  var el = document.getElementById("viewer-id");
+  el.innerHTML = "";
+  var img = document.createElement("img");
+  img.src = (myProfile && myProfile.avatar_url) || fallbackAvatar((myProfile && myProfile.display_name) || "?");
+  var span = document.createElement("span");
+  span.textContent = (myProfile && myProfile.display_name) || "you";
+  el.appendChild(img); el.appendChild(span);
+}
+document.getElementById("viewer-id").addEventListener("click", function(){ showView("profile"); });
+
+function renderProfileView(){
+  document.getElementById("profile-avatar-preview").src = (myProfile && myProfile.avatar_url) || fallbackAvatar((myProfile && myProfile.display_name) || "?");
+  document.getElementById("profile-name").value = (myProfile && myProfile.display_name) || "";
+  document.getElementById("profile-bio").value = (myProfile && myProfile.bio) || "";
+}
+document.getElementById("avatar-btn").addEventListener("click", function(){ document.getElementById("avatar-input").click(); });
+document.getElementById("avatar-input").addEventListener("change", async function(e){
+  var file = e.target.files && e.target.files[0]; if(!file) return;
+  var statusEl = document.getElementById("profile-status");
+  statusEl.className = "status-line"; statusEl.textContent = "Uploading...";
+  var ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  var path = myId + "/avatar." + ext;
+  try{
+    var up = await sb.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+    if(up.error) throw up.error;
+    var pub = sb.storage.from("avatars").getPublicUrl(path);
+    var url = pub.data.publicUrl + "?t=" + Date.now();
+    var upd = await sb.from("profiles").update({ avatar_url: url }).eq("id", myId);
+    if(upd.error) throw upd.error;
+    myProfile.avatar_url = url;
+    renderProfileView(); renderViewerChip();
+    statusEl.textContent = "Photo updated.";
+  }catch(err){
+    statusEl.className = "status-line err"; statusEl.textContent = "Couldn't upload: " + (err.message || err);
+  }
+});
+document.getElementById("profile-save").addEventListener("click", async function(){
+  var name = document.getElementById("profile-name").value.trim();
+  var bio = document.getElementById("profile-bio").value.trim();
+  var statusEl = document.getElementById("profile-status");
+  statusEl.className = "status-line"; statusEl.textContent = "Saving...";
+  var res = await sb.from("profiles").update({ display_name: name, bio: bio }).eq("id", myId);
+  if(res.error){ statusEl.className = "status-line err"; statusEl.textContent = res.error.message; return; }
+  myProfile.display_name = name; myProfile.bio = bio;
+  renderViewerChip();
+  statusEl.textContent = "Saved.";
+});
+
+/* ================= onboarding (condition picker) ================= */
+function loadConditions(){
+  if(myProfile && Array.isArray(myProfile.conditions) && myProfile.conditions.length){ return new Set(myProfile.conditions); }
+  return new Set();
+}
+var selected = new Set();
+var VENN_SVG_NS = "http://www.w3.org/2000/svg";
+function buildVenn(container, size, opts){
+  var svg = document.createElementNS(VENN_SVG_NS,"svg");
+  svg.setAttribute("viewBox","0 0 400 400");
+  var defs = document.createElementNS(VENN_SVG_NS,"defs");
+  defs.innerHTML = '<filter id="wobble-'+size+'" x="-20%" y="-20%" width="140%" height="140%">'+
+    '<feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="4" result="n"/>'+
+    '<feDisplacementMap in="SourceGraphic" in2="n" scale="7"/></filter>';
+  svg.appendChild(defs);
+  var g = document.createElementNS(VENN_SVG_NS,"g");
+  g.setAttribute("filter","url(#wobble-"+size+")");
+  svg.appendChild(g);
+  var circles = [
+    {key:"pots", cx:150, cy:150, lx:78, ly:78},
+    {key:"eds", cx:250, cy:150, lx:322, ly:78},
+    {key:"mcas", cx:200, cy:240, lx:200, ly:352}
+  ];
+  var r = 118;
+  circles.forEach(function(c){
+    var el = document.createElementNS(VENN_SVG_NS,"circle");
+    el.setAttribute("cx",c.cx); el.setAttribute("cy",c.cy); el.setAttribute("r",r);
+    el.setAttribute("class","venn-circle");
+    el.style.stroke = COND[c.key].color; el.style.strokeWidth = "2.5"; el.style.fill = COND[c.key].color;
+    el.style.fillOpacity = opts.fillFn ? opts.fillFn(c.key) : (selected.has(c.key) ? 0.32 : 0.07);
+    if(opts.clickable) el.addEventListener("click", function(){ opts.onClick(c.key); });
+    g.appendChild(el);
+  });
+  circles.forEach(function(c){
+    var t = document.createElementNS(VENN_SVG_NS,"text");
+    t.setAttribute("x",c.lx); t.setAttribute("y",c.ly); t.setAttribute("text-anchor","middle");
+    t.setAttribute("class","venn-label"); t.style.fill = "var(--ink)"; t.textContent = COND[c.key].label;
+    if(opts.clickable) t.addEventListener("click", function(){ opts.onClick(c.key); });
+    svg.appendChild(t);
+  });
+  container.innerHTML = ""; container.appendChild(svg);
+}
+function renderOnboardPicks(){
+  var box = document.getElementById("onboard-picks");
+  var btn = document.getElementById("enter-btn");
+  if(selected.size === 0){ box.textContent = "nothing selected yet"; btn.disabled = true; return; }
+  box.innerHTML = ""; box.appendChild(document.createTextNode("you picked: "));
+  Array.from(selected).forEach(function(k){
+    var s = document.createElement("span"); s.className = "pick-tag mono";
+    s.style.background = COND[k].color + "33"; s.style.color = COND[k].color; s.textContent = COND[k].label;
+    box.appendChild(s);
+  });
+  btn.disabled = false;
+}
+function initOnboard(){
+  buildVenn(document.getElementById("venn-wrap"), "ob", {
+    clickable:true,
+    fillFn: function(k){ return selected.has(k) ? 0.38 : 0.08; },
+    onClick: function(k){ if(selected.has(k)) selected.delete(k); else selected.add(k); initOnboard(); renderOnboardPicks(); }
+  });
+  renderOnboardPicks();
+}
+document.getElementById("enter-btn").addEventListener("click", async function(){
+  await sb.from("profiles").update({ conditions: Array.from(selected) }).eq("id", myId);
+  myProfile.conditions = Array.from(selected);
+  hide(document.getElementById("onboard"));
+  document.getElementById("app").classList.add("active");
+  boot();
+});
+document.getElementById("edit-conditions").addEventListener("click", function(){
+  document.getElementById("app").classList.remove("active");
+  show(document.getElementById("onboard"));
+  initOnboard();
+});
+
+/* ================= static content ================= */
+var FEED = [
+  {title:"Standing test, decoded: what a +38 bpm jump actually means", tags:["pots"],
+   body:"A walk-through of the NASA 10-minute lean test and what the numbers on your own chart are telling you."},
+  {title:"Scoring your own joints: the Beighton test in five minutes", tags:["eds"],
+   body:"The nine-point hypermobility check most GPs skip — how to do it on yourself before your rheumatology referral."},
+  {title:"Reading a tryptase panel without a biochemistry degree", tags:["mcas"],
+   body:"What a baseline vs. event tryptase result is actually measuring, and why timing the draw matters more than the number."},
+  {title:"The low-histamine list that doesn't taste like cardboard", tags:["mcas"],
+   body:"A rotation of meals built around what actually triggers flares, not every food blog's copy-pasted banned list."},
+  {title:"Bracing and compression, layered without looking medical", tags:["pots","eds"],
+   body:"What to wear under normal clothes when your joints need support and your blood pressure needs help at the same time."},
+  {title:"What to say when your doctor's never heard of your combination", tags:["pots","eds","mcas"],
+   body:"A short script for the appointment where you have to explain three conditions in the time usually given to one."}
+];
+var RESOURCES = {
+  pots:[{name:"Standing test log sheet", fmt:"PDF"},{name:"Salt & fluid loading, the actual numbers", fmt:"GUIDE"}],
+  eds:[{name:"Beighton score tracker", fmt:"PDF"},{name:"Physio exercises that don't overextend", fmt:"GUIDE"}],
+  mcas:[{name:"Low-histamine starter list", fmt:"PDF"},{name:"H1/H2 blocker basics", fmt:"GUIDE"}],
+  shared:[{name:"Doctor letter template for the trifecta", fmt:"DOC"},{name:"Glossary: every acronym explained plainly", fmt:"GUIDE"}]
+};
+function tagDots(tags){
+  var row = document.createElement("div"); row.className = "tagrow";
+  (tags||[]).forEach(function(k){
+    if(!COND[k]) return;
+    var d = document.createElement("span"); d.className = "tagdot"; d.style.background = COND[k].color; d.title = COND[k].label;
+    row.appendChild(d);
+  });
+  return row;
+}
+function matchesSelection(tags){ if(selected.size === 0) return true; return (tags||[]).some(function(t){ return selected.has(t); }); }
+function renderChips(){
+  var rail = document.getElementById("rail-chips"); rail.innerHTML = "";
+  if(selected.size === 0){
+    var s = document.createElement("span"); s.className = "chip mono"; s.textContent = "all conditions";
+    s.style.background = "var(--line)"; s.style.color = "var(--ink-dim)"; rail.appendChild(s); return;
+  }
+  Array.from(selected).forEach(function(k){
+    var s = document.createElement("span"); s.className = "chip mono";
+    s.style.background = COND[k].color + "2a"; s.style.color = COND[k].color; s.textContent = COND[k].label;
+    rail.appendChild(s);
+  });
+}
+function renderFeed(){
+  var list = document.getElementById("feed-list"); list.innerHTML = "";
+  FEED.filter(function(f){ return matchesSelection(f.tags); }).forEach(function(f){
+    var card = document.createElement("div"); card.className = "card";
+    card.appendChild(tagDots(f.tags));
+    var h = document.createElement("h3"); h.textContent = f.title; card.appendChild(h);
+    var p = document.createElement("p"); p.textContent = f.body; card.appendChild(p);
+    list.appendChild(card);
+  });
+}
+function renderResources(){
+  var list = document.getElementById("resources-list"); list.innerHTML = "";
+  var groups = selected.size === 0 ? ["pots","eds","mcas","shared"] : Array.from(selected).concat(["shared"]);
+  groups.forEach(function(key){
+    var wrap = document.createElement("div"); wrap.className = "res-group";
+    var h = document.createElement("h3");
+    var label = key === "shared" ? "The trifecta" : COND[key].full;
+    var dotColor = key === "shared" ? "var(--accent)" : COND[key].color;
+    h.innerHTML = '<span class="res-dot" style="background:'+dotColor+'"></span>'+label;
+    wrap.appendChild(h);
+    RESOURCES[key].forEach(function(r){
+      var item = document.createElement("div"); item.className = "res-item";
+      item.innerHTML = '<span>'+r.name+'</span><span class="fmt mono">'+r.fmt+'</span>';
+      wrap.appendChild(item);
+    });
+    list.appendChild(wrap);
+  });
+}
+function heartSvg(filled){
+  return '<svg viewBox="0 0 24 24" fill="'+(filled?"currentColor":"none")+'" stroke="currentColor" stroke-width="1.8">' +
+    '<path d="M12 20.3s-7.3-4.5-9.8-9C.7 7.9 2.2 4.8 5.4 4.3c2-.3 3.8.6 4.9 2.2 1.1-1.6 2.9-2.5 4.9-2.2 3.2.5 4.7 3.6 3.2 7-2.5 4.5-9.8 9-9.8 9z" stroke-linejoin="round"/></svg>';
+}
+
+/* ================= symptom log (real, per-user via RLS) ================= */
+var lastStoreError = null;
+function noteStoreError(where, e){
+  lastStoreError = (where || "store") + ": " + ((e && e.message) || String(e));
+  try{ console.error("[Vertika]", lastStoreError, e); }catch(ignore){}
+}
+function mapEntryRow(row){
+  return { id: row.id, dateISO: row.date_iso, rawText: row.raw_text, symptoms: row.symptoms || [], trigger: row.trigger || null };
+}
+async function addEntry(dateISO, rawText, symptoms, trigger){
+  var res = await sb.from("entries").insert({
+    user_id: myId, date_iso: dateISO, raw_text: rawText, symptoms: symptoms, trigger: trigger || null
+  }).select().single();
+  if(res.error){ noteStoreError("save", res.error); return null; }
+  return res.data.id;
+}
+async function updateEntryTrigger(id, trigger){
+  var res = await sb.from("entries").update({ trigger: trigger }).eq("id", id);
+  if(res.error) noteStoreError("save", res.error);
+}
+async function deleteEntry(id){
+  var res = await sb.from("entries").delete().eq("id", id);
+  if(res.error) noteStoreError("delete", res.error);
+}
+async function monthEntries(year, monthIndex){
+  var pad = function(n){ return n<10 ? "0"+n : ""+n; };
+  var start = year+"-"+pad(monthIndex+1)+"-01";
+  var end = year+"-"+pad(monthIndex+1)+"-"+pad(new Date(year, monthIndex+1, 0).getDate());
+  var res = await sb.from("entries").select("*").eq("user_id", myId)
+    .gte("date_iso", start).lte("date_iso", end).order("date_iso", { ascending: true }).limit(500);
+  if(res.error){ noteStoreError("read", res.error); return []; }
+  return res.data.map(mapEntryRow);
+}
+async function allEntries(){
+  var res = await sb.from("entries").select("*").eq("user_id", myId).order("date_iso", { ascending: false }).limit(500);
+  if(res.error){ noteStoreError("read", res.error); return []; }
+  return res.data.map(mapEntryRow);
+}
+
+/* ---------------- triggers ---------------- */
+var TRIGGERS = [
+  {key:"eating", label:"Eating", needsDetail:true, placeholder:"which food?"},
+  {key:"activity", label:"Physical activity", needsDetail:true, placeholder:"what activity?"},
+  {key:"standing", label:"Standing up", needsDetail:false},
+  {key:"heat", label:"Heat / hot shower", needsDetail:false},
+  {key:"stress", label:"Stress", needsDetail:false},
+  {key:"sleep", label:"Poor sleep", needsDetail:false},
+  {key:"alcohol", label:"Alcohol", needsDetail:false},
+  {key:"medication", label:"Medication change", needsDetail:false},
+  {key:"cycle", label:"Menstrual cycle", needsDetail:false},
+  {key:"other", label:"Other", needsDetail:true, placeholder:"what was it?"}
+];
+function triggerLabel(trigger){
+  if(!trigger || !trigger.category) return "";
+  var t = TRIGGERS.filter(function(x){ return x.key === trigger.category; })[0];
+  var base = t ? t.label : trigger.category;
+  return trigger.detail ? base + " — " + trigger.detail : base;
+}
+var pendingEntryIds = [];
+function openTriggerBar(entryIds){
+  pendingEntryIds = entryIds;
+  var bar = document.getElementById("trigger-bar");
+  var grid = document.getElementById("t-grid");
+  grid.innerHTML = "";
+  TRIGGERS.forEach(function(t){
+    var b = document.createElement("button"); b.type = "button"; b.className = "t-opt"; b.textContent = t.label;
+    b.addEventListener("click", function(){
+      if(t.needsDetail){
+        document.getElementById("t-detail").classList.add("on");
+        document.getElementById("t-detail-input").placeholder = t.placeholder;
+        document.getElementById("t-detail-input").value = "";
+        document.getElementById("t-detail-input").dataset.key = t.key;
+        document.getElementById("t-detail-input").focus();
+      } else {
+        commitTrigger({category:t.key, detail:null});
+      }
+    });
+    grid.appendChild(b);
+  });
+  bar.classList.add("on");
+}
+async function commitTrigger(trigger){
+  var ids = pendingEntryIds.slice();
+  document.getElementById("trigger-bar").classList.remove("on");
+  document.getElementById("t-detail").classList.remove("on");
+  pendingEntryIds = [];
+  for(var i=0;i<ids.length;i++){ await updateEntryTrigger(ids[i], trigger); }
+  await refreshAll(document.getElementById("log-date").value || todayISO());
+}
+document.getElementById("t-detail-save").addEventListener("click", function(){
+  var input = document.getElementById("t-detail-input");
+  commitTrigger({category: input.dataset.key, detail: input.value.trim() || null});
+});
+
+/* ---------------- quick-log ---------------- */
+var QUICK_SYMPTOMS = [
+  {text:"Fast heart rate on standing", tags:["pots"]},
+  {text:"Dizziness", tags:["pots","mcas"]},
+  {text:"Lightheadedness / near-faint", tags:["pots"]},
+  {text:"Brain fog", tags:["pots","eds","mcas"]},
+  {text:"Joint pain or subluxation", tags:["eds"]},
+  {text:"Joint ache after activity", tags:["eds"]},
+  {text:"Flushing or hives", tags:["mcas"]},
+  {text:"GI upset / nausea", tags:["mcas"]},
+  {text:"Fatigue / crash", tags:["pots","eds","mcas"]},
+  {text:"Headache", tags:["pots","mcas"]},
+  {text:"Palpitations", tags:["pots"]},
+  {text:"Skin bruises easily", tags:["eds"]}
+];
+function renderQuickChips(){
+  var grid = document.getElementById("qchip-grid"); grid.innerHTML = "";
+  QUICK_SYMPTOMS.forEach(function(s){
+    var row = document.createElement("div"); row.className = "qrow";
+    var dot = document.createElement("span"); dot.className = "tagdot"; dot.style.background = COND[s.tags[0]].color;
+    row.appendChild(dot);
+    var label = document.createElement("span"); label.className = "qlabel"; label.textContent = s.text;
+    row.appendChild(label);
+    var seg = document.createElement("div"); seg.className = "seg";
+    [1,2,3].forEach(function(sev){
+      var b = document.createElement("button"); b.type = "button"; b.textContent = SEV_LABEL[sev].slice(0,4);
+      b.addEventListener("click", async function(){
+        var date = document.getElementById("log-date").value || todayISO();
+        var id = await addEntry(date, s.text, [{text:s.text, tags:s.tags, severity:sev}]);
+        await refreshAll(date);
+        if(id) openTriggerBar([id]);
+      });
+      seg.appendChild(b);
+    });
+    row.appendChild(seg);
+    grid.appendChild(row);
+  });
+}
+
+/* ---------------- history list ---------------- */
+async function renderHistory(){
+  var list = document.getElementById("history-list");
+  var entries = await allEntries();
+  list.innerHTML = "";
+  if(!entries.length){
+    list.innerHTML = '<div class="history-empty">Nothing logged yet. Use the box or the quick-log list above.</div>';
+    return;
+  }
+  var byDate = {}, order = [];
+  entries.forEach(function(e){ if(!byDate[e.dateISO]){ byDate[e.dateISO]=[]; order.push(e.dateISO); } byDate[e.dateISO].push(e); });
+  order.forEach(function(dateISO){
+    var group = document.createElement("div"); group.className = "history-group";
+    var head = document.createElement("div"); head.className = "history-date";
+    head.innerHTML = '<span>'+dateISO+'</span><span class="line"></span>';
+    group.appendChild(head);
+    byDate[dateISO].forEach(function(entry){ group.appendChild(buildEntryRow(entry, dateISO)); });
+    list.appendChild(group);
+  });
+}
+function buildEntryRow(entry, dateISO){
+  var wrap = document.createElement("div");
+  (entry.symptoms||[]).forEach(function(s, idx){
+    var row = document.createElement("div"); row.className = "entry-item";
+    var body = document.createElement("div"); body.className = "entry-body";
+    var p = document.createElement("div");
+    p.innerHTML = escapeHtml(s.text) + '<span class="sev-badge">'+SEV_LABEL[s.severity]+'</span>';
+    body.appendChild(p);
+    var meta = document.createElement("div"); meta.className = "entry-meta";
+    (s.tags||[]).forEach(function(t){
+      if(!COND[t]) return;
+      var d = document.createElement("span"); d.className = "tagdot"; d.style.background = COND[t].color;
+      meta.appendChild(d);
+    });
+    body.appendChild(meta);
+    if(idx === 0 && entry.trigger){
+      var tr = document.createElement("div"); tr.className = "entry-trigger";
+      tr.textContent = "↳ " + triggerLabel(entry.trigger);
+      body.appendChild(tr);
+    } else if(idx === 0 && !entry.trigger){
+      var addT = document.createElement("button");
+      addT.className = "link-btn"; addT.style.marginLeft = "0"; addT.style.marginTop = "3px"; addT.style.display="block";
+      addT.textContent = "+ add what you were doing";
+      addT.addEventListener("click", function(){ openTriggerBar([entry.id]); document.getElementById("trigger-bar").scrollIntoView({block:"center"}); });
+      body.appendChild(addT);
+    }
+    row.appendChild(body);
+    if(idx === 0){
+      var del = document.createElement("button"); del.className = "entry-del"; del.textContent = "×"; del.title = "delete entry";
+      del.addEventListener("click", async function(){ await deleteEntry(entry.id); await refreshAll(dateISO); });
+      row.appendChild(del);
+    }
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+async function refreshAll(focusDate){
+  await renderCalendar();
+  await renderHistory();
+  if(focusDate){
+    var d = new Date(focusDate+"T00:00:00");
+    if(d.getFullYear() === calYear && d.getMonth() === calMonth){
+      calSelectedDate = focusDate;
+      await renderCalendar();
+      var dayEntries = (await monthEntries(calYear, calMonth)).filter(function(e){ return e.dateISO === focusDate; });
+      showDayPanel(focusDate, dayEntries);
+    }
+  }
+}
+document.querySelectorAll(".subtab").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll(".subtab").forEach(function(b){ b.classList.remove("on"); });
+    document.querySelectorAll(".subview").forEach(function(v){ v.classList.remove("on"); });
+    btn.classList.add("on");
+    document.getElementById("subview-"+btn.dataset.sub).classList.add("on");
+  });
+});
+
+/* ---------------- log form ---------------- */
+var LOG_TAGS = new Set();
+function makeTagPicker(containerId, targetSet){
+  var box = document.getElementById(containerId); box.innerHTML = "";
+  Object.keys(COND).forEach(function(k){
+    var b = document.createElement("button"); b.type = "button"; b.textContent = COND[k].label;
+    b.addEventListener("click", function(){
+      if(targetSet.has(k)){ targetSet.delete(k); b.classList.remove("on"); b.style.background=""; }
+      else { targetSet.add(k); b.classList.add("on"); b.style.background = COND[k].color; }
+    });
+    box.appendChild(b);
+  });
+}
+var logSev = 2;
+document.querySelectorAll("#log-sev button").forEach(function(b){
+  b.addEventListener("click", function(){
+    document.querySelectorAll("#log-sev button").forEach(function(x){ x.classList.remove("on"); });
+    b.classList.add("on"); logSev = parseInt(b.dataset.sev,10);
+  });
+});
+function todayISO(){
+  var d = new Date(); var pad = function(n){ return n<10 ? "0"+n : ""+n; };
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+}
+document.getElementById("log-date").value = todayISO();
+document.getElementById("jump-date").value = todayISO();
+
+document.getElementById("log-submit").addEventListener("click", async function(){
+  var text = document.getElementById("log-input").value.trim();
+  var statusEl = document.getElementById("log-status");
+  if(!text){ statusEl.textContent = "Write something first."; return; }
+  var tags = LOG_TAGS.size ? Array.from(LOG_TAGS) : ["pots","eds","mcas"];
+  var date = document.getElementById("log-date").value || todayISO();
+  this.disabled = true; statusEl.className = "status-line"; statusEl.textContent = "Saving...";
+  var id = await addEntry(date, text, [{text:text, tags:tags, severity:logSev}]);
+  this.disabled = false;
+  if(!id){ statusEl.className = "status-line err"; statusEl.textContent = lastStoreError || "Couldn't save — try again."; return; }
+  document.getElementById("log-input").value = "";
+  LOG_TAGS.clear();
+  document.querySelectorAll("#log-tags button").forEach(function(b){ b.classList.remove("on"); b.style.background=""; });
+  statusEl.textContent = "Logged for " + date + ".";
+  await refreshAll(date);
+  openTriggerBar([id]);
+});
+
+/* ---------------- calendar ---------------- */
+var calYear, calMonth, calEntries = [], calSelectedDate = null;
+var MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function severityColorSpan(tags, severity){
+  var span = document.createElement("span");
+  span.style.background = COND[tags[0] || "pots"].color;
+  span.style.height = (3 + severity*2) + "px";
+  return span;
+}
+async function renderCalendar(){
+  var now = new Date();
+  if(calYear === undefined){ calYear = now.getFullYear(); calMonth = now.getMonth(); }
+  document.getElementById("cal-title").textContent = MONTH_NAMES[calMonth] + " " + calYear;
+  calEntries = await monthEntries(calYear, calMonth);
+  var byDate = {};
+  calEntries.forEach(function(e){ (byDate[e.dateISO] = byDate[e.dateISO] || []).push(e); });
+  var grid = document.getElementById("cal-grid"); grid.innerHTML = "";
+  ["S","M","T","W","T","F","S"].forEach(function(d){ var h=document.createElement("div"); h.className="cal-dow"; h.textContent=d; grid.appendChild(h); });
+  var firstDow = new Date(calYear, calMonth, 1).getDay();
+  var daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  var pad = function(n){ return n<10 ? "0"+n : ""+n; };
+  for(var i=0;i<firstDow;i++){ var p=document.createElement("div"); p.className="cal-cell pad"; grid.appendChild(p); }
+  var today = todayISO();
+  for(var day=1; day<=daysInMonth; day++){
+    var dateISO = calYear+"-"+pad(calMonth+1)+"-"+pad(day);
+    var cell = document.createElement("div"); cell.className = "cal-cell";
+    if(dateISO === today) cell.classList.add("today");
+    if(dateISO === calSelectedDate) cell.classList.add("selected");
+    var num = document.createElement("span"); num.textContent = day; cell.appendChild(num);
+    var entries = byDate[dateISO] || [];
+    var items = []; entries.forEach(function(e){ items = items.concat(e.symptoms || []); });
+    if(items.length){
+      cell.classList.add("has-entries");
+      var count = document.createElement("span"); count.className = "cal-count"; count.textContent = items.length;
+      cell.appendChild(count);
+      var bars = document.createElement("div"); bars.className = "cal-bars";
+      items.slice(0,4).forEach(function(it){ bars.appendChild(severityColorSpan(it.tags||[], it.severity||1)); });
+      cell.appendChild(bars);
+    }
+    cell.addEventListener("click", function(dISO, dayEntries){
+      return function(){ calSelectedDate = dISO; renderCalendar(); showDayPanel(dISO, dayEntries); };
+    }(dateISO, entries));
+    grid.appendChild(cell);
+  }
+}
+function showDayPanel(dateISO, entries){
+  var panel = document.getElementById("day-panel");
+  var title = document.getElementById("day-panel-title");
+  var list = document.getElementById("day-panel-list");
+  if(!entries || !entries.length){ panel.style.display = "none"; return; }
+  panel.style.display = "block"; title.textContent = dateISO; list.innerHTML = "";
+  entries.forEach(function(entry){ list.appendChild(buildEntryRow(entry, dateISO)); });
+}
+document.getElementById("cal-prev").addEventListener("click", function(){
+  calMonth--; if(calMonth<0){ calMonth=11; calYear--; }
+  calSelectedDate = null; document.getElementById("day-panel").style.display = "none"; renderCalendar();
+});
+document.getElementById("cal-next").addEventListener("click", function(){
+  calMonth++; if(calMonth>11){ calMonth=0; calYear++; }
+  calSelectedDate = null; document.getElementById("day-panel").style.display = "none"; renderCalendar();
+});
+document.getElementById("jump-go").addEventListener("click", async function(){
+  var val = document.getElementById("jump-date").value;
+  if(!val) return;
+  var d = new Date(val+"T00:00:00");
+  calYear = d.getFullYear(); calMonth = d.getMonth(); calSelectedDate = val;
+  await renderCalendar();
+  var dayEntries = (await monthEntries(calYear, calMonth)).filter(function(e){ return e.dateISO === val; });
+  showDayPanel(val, dayEntries);
+});
+
+/* ================= community (real, shared) ================= */
+function localCacheKey(){ return "vertika-community-fallback"; }
+
+async function createPost(text, tags){
+  var res = await sb.from("posts").insert({ author_id: myId, text: text, tags: tags }).select().single();
+  if(res.error){ noteStoreError("post", res.error); return null; }
+  return res.data.id;
+}
+async function toggleTally(postId){
+  var existing = await sb.from("tallies").select("post_id").eq("post_id", postId).eq("user_id", myId).maybeSingle();
+  if(existing.data){ await sb.from("tallies").delete().eq("post_id", postId).eq("user_id", myId); }
+  else{ await sb.from("tallies").insert({ post_id: postId, user_id: myId }); }
+}
+async function addReply(postId, text){
+  var res = await sb.from("replies").insert({ post_id: postId, author_id: myId, text: text });
+  if(res.error) noteStoreError("reply", res.error);
+}
+async function loadPosts(){
+  var res = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
+  if(res.error){ noteStoreError("read", res.error); return []; }
+  var posts = res.data;
+  for(var i=0;i<posts.length;i++){
+    var p = posts[i];
+    try{
+      var tc = await sb.from("tallies").select("*", { count: "exact", head: true }).eq("post_id", p.id);
+      p.tallyCount = tc.count || 0;
+      var mine = await sb.from("tallies").select("post_id").eq("post_id", p.id).eq("user_id", myId).maybeSingle();
+      p.iTallied = !!mine.data;
+    }catch(e){ p.tallyCount = 0; p.iTallied = false; }
+    try{
+      var rr = await sb.from("replies").select("*").eq("post_id", p.id).order("created_at", { ascending: true }).limit(50);
+      p.repliesList = rr.data || [];
+    }catch(e){ p.repliesList = []; }
+  }
+  return posts;
+}
+function buildPostCard(p, names){
+  var card = document.createElement("div"); card.className = "card post-card";
+  card.appendChild(tagDots(p.tags||[]));
+  var prof = names[p.author_id] || {};
+  var authorLine = document.createElement("div"); authorLine.className = "post-author";
+  var img = document.createElement("img"); img.src = prof.avatar_url || fallbackAvatar(prof.display_name || "?");
+  var span = document.createElement("span"); span.textContent = prof.display_name || "Member";
+  authorLine.appendChild(img); authorLine.appendChild(span);
+  card.appendChild(authorLine);
+  var txt = document.createElement("p"); txt.className = "post-text"; txt.textContent = p.text;
+  card.appendChild(txt);
+
+  var meta = document.createElement("div"); meta.className = "meta";
+  var tallyBtn = document.createElement("button"); tallyBtn.type = "button";
+  tallyBtn.className = "tally-btn" + (p.iTallied ? " on" : "");
+  tallyBtn.innerHTML = heartSvg(p.iTallied) + " <span>" + (p.tallyCount||0) + "</span>";
+  tallyBtn.addEventListener("click", async function(){
+    tallyBtn.disabled = true;
+    await toggleTally(p.id);
+    await renderCommunity();
+  });
+  meta.appendChild(tallyBtn);
+  var replyToggle = document.createElement("button"); replyToggle.type = "button"; replyToggle.className = "reply-toggle";
+  replyToggle.textContent = (p.repliesList||[]).length + " replies";
+  meta.appendChild(replyToggle);
+  card.appendChild(meta);
+
+  var repliesWrap = document.createElement("div"); repliesWrap.className = "replies-wrap"; repliesWrap.style.display = "none";
+  (p.repliesList||[]).forEach(function(r){
+    var rprof = names[r.author_id] || {};
+    var rdiv = document.createElement("div"); rdiv.className = "reply-item";
+    var strong = document.createElement("span"); strong.className = "reply-author"; strong.textContent = (rprof.display_name || "Member") + ": ";
+    rdiv.appendChild(strong);
+    rdiv.appendChild(document.createTextNode(r.text));
+    repliesWrap.appendChild(rdiv);
+  });
+  var replyRow = document.createElement("div"); replyRow.className = "reply-row";
+  var input = document.createElement("input"); input.type = "text"; input.placeholder = "Write a reply...";
+  var send = document.createElement("button"); send.type = "button"; send.className = "btn ghost sm"; send.textContent = "Reply";
+  send.addEventListener("click", async function(){
+    var t = input.value.trim(); if(!t) return;
+    send.disabled = true;
+    await addReply(p.id, t);
+    input.value = "";
+    await renderCommunity();
+  });
+  input.addEventListener("keydown", function(e){ if(e.key === "Enter") send.click(); });
+  replyRow.appendChild(input); replyRow.appendChild(send);
+  repliesWrap.appendChild(replyRow);
+  replyToggle.addEventListener("click", function(){ repliesWrap.style.display = repliesWrap.style.display === "none" ? "block" : "none"; });
+  card.appendChild(repliesWrap);
+  return card;
+}
+var communityGroup = "all";
+var communitySort = "recent";
+document.querySelectorAll("#community-groups .grouptab").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll("#community-groups .grouptab").forEach(function(b){ b.classList.remove("on"); });
+    btn.classList.add("on"); communityGroup = btn.dataset.group; renderCommunity();
+  });
+});
+document.querySelectorAll("#community-sort button").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll("#community-sort button").forEach(function(b){ b.classList.remove("on"); });
+    btn.classList.add("on"); communitySort = btn.dataset.sort; renderCommunity();
+  });
+});
+async function renderCommunity(){
+  var list = document.getElementById("community-list"); list.innerHTML = "";
+  var posts = await loadPosts();
+  posts = posts.filter(function(p){ return matchesSelection(p.tags||[]); });
+  if(communityGroup !== "all"){ posts = posts.filter(function(p){ return (p.tags||[]).indexOf(communityGroup) !== -1; }); }
+  if(communitySort === "popular"){ posts = posts.slice().sort(function(a,b){ return (b.tallyCount||0) - (a.tallyCount||0); }); }
+  if(!posts.length){ list.innerHTML = '<div class="history-empty">No posts yet — be the first to share something.</div>'; return; }
+  var ids = posts.map(function(p){ return p.author_id; });
+  posts.forEach(function(p){ (p.repliesList||[]).forEach(function(r){ ids.push(r.author_id); }); });
+  ids = Array.from(new Set(ids));
+  var names = {};
+  if(ids.length){
+    try{
+      var pr = await sb.from("profiles").select("id,display_name,avatar_url").in("id", ids);
+      (pr.data||[]).forEach(function(row){ names[row.id] = row; });
+    }catch(e){}
+  }
+  posts.forEach(function(p){ list.appendChild(buildPostCard(p, names)); });
+}
+document.getElementById("post-submit").addEventListener("click", async function(){
+  var text = document.getElementById("post-input").value.trim();
+  var statusEl = document.getElementById("post-status");
+  if(!text) return;
+  var tags = POST_TAGS.size ? Array.from(POST_TAGS) : ["pots","eds","mcas"];
+  var btn = this; btn.disabled = true; statusEl.textContent = "Posting...";
+  var id = await createPost(text, tags);
+  btn.disabled = false;
+  if(!id){ statusEl.className = "status-line err"; statusEl.textContent = lastStoreError || "Couldn't post — try again."; return; }
+  document.getElementById("post-input").value = "";
+  POST_TAGS.clear();
+  document.querySelectorAll("#post-tags button").forEach(function(b){ b.classList.remove("on"); b.style.background=""; });
+  statusEl.className = "status-line"; statusEl.textContent = "";
+  await renderCommunity();
+});
+var POST_TAGS = new Set();
+
+/* ================= nav / boot ================= */
+function showView(name){
+  document.querySelectorAll(".view").forEach(function(v){ v.classList.remove("on"); });
+  document.getElementById("view-"+name).classList.add("on");
+  document.querySelectorAll(".tab-item").forEach(function(n){ n.classList.toggle("on", n.dataset.view === name); });
+  if(name === "community") renderCommunity();
+  if(name === "profile") renderProfileView();
+}
+document.querySelectorAll(".tab-item").forEach(function(btn){ btn.addEventListener("click", function(){ showView(btn.dataset.view); }); });
+
+function boot(){
+  renderChips(); renderFeed(); renderResources();
+  makeTagPicker("log-tags", LOG_TAGS);
+  makeTagPicker("post-tags", POST_TAGS);
+  renderQuickChips();
+  renderCalendar();
+  renderHistory();
+  renderCommunity();
+}
+
+async function onSignedIn(user){
+  myId = user.id;
+  hide(document.getElementById("authscreen"));
+  await loadMyProfile();
+  renderViewerChip();
+  selected = loadConditions();
+  if(selected.size > 0){
+    hide(document.getElementById("onboard"));
+    document.getElementById("app").classList.add("active");
+    boot();
+  } else {
+    document.getElementById("app").classList.remove("active");
+    show(document.getElementById("onboard"));
+    initOnboard();
+  }
+}
+function onSignedOut(){
+  myId = null; myProfile = null;
+  document.getElementById("app").classList.remove("active");
+  hide(document.getElementById("onboard"));
+  show(document.getElementById("authscreen"));
+}
+
+(async function initAuth(){
+  var res = await sb.auth.getSession();
+  if(res.data.session){ await onSignedIn(res.data.session.user); } else { onSignedOut(); }
+  sb.auth.onAuthStateChange(function(event, session){
+    if(session && session.user.id !== myId){ onSignedIn(session.user); }
+    else if(!session){ onSignedOut(); }
+  });
+})();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
+})();
+</script>
+</body>
+</html>
